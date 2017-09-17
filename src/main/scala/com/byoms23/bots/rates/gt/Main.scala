@@ -24,10 +24,10 @@ object Main {
     // needed for the future flatMap/onComplete in the end
     implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-    // streams are re-usable so we can define it here
-    // and use it for every request
-    val numbers = Source.fromIterator(() =>
-      Iterator.continually(Random.nextInt()))
+//    // streams are re-usable so we can define it here
+//    // and use it for every request
+//    val numbers = Source.fromIterator(() =>
+//      Iterator.continually(Random.nextInt()))
 
 //    val route =
 //      path("random") {
@@ -49,7 +49,7 @@ object Main {
 //      .flatMap(_.unbind()) // trigger unbinding from the port
 
 
-    val telegramService = new TelegramService
+    val telegramService = system.actorOf(TelegramService.props(), "telegramService")
 
     val httpService = new HttpService(telegramService)
 

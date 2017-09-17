@@ -1,22 +1,18 @@
 package com.byoms23.bots.rates.gt.http.routes
 
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.actor.ActorRef
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives
-import com.byoms23.bots.rates.gt.lib.TelegramService
-import spray.json.DefaultJsonProtocol
+import akka.pattern.ask
+import akka.util.Timeout
+import com.byoms23.bots.rates.gt.lib._
 
-// domain model
-final case class Item(name: String, id: Long)
-final case class Order(items: List[Item])
+import scala.concurrent.duration._
 
 
-// collect your json format instances into a support trait:
-trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
-  implicit val itemFormat = jsonFormat2(Item)
-  implicit val orderFormat = jsonFormat1(Order) // contains List[Item]
-}
+class TelegramServiceRoute(val telegramService: ActorRef) extends Directives with TelegramJsonSupport {
 
-class TelegramServiceRoute(val telegramService: TelegramService) extends Directives with JsonSupport {
+  implicit val timeout = Timeout(5.seconds)
 
   val route = pathPrefix("bots" / Segment) { botToken =>
     path("providers" / "telegram" / Segment) { botSecret =>
@@ -25,7 +21,15 @@ class TelegramServiceRoute(val telegramService: TelegramService) extends Directi
 //          entity(as[LoginPassword]) { loginPassword =>
 //            complete(signIn(loginPassword.login, loginPassword.password).map(_.asJson))
 //          }
-          complete(s"OK, botToken:$botToken botSecret:$botSecret ")
+          onSuccess(telegramService ? GetHealthRequest) {
+            case response: HealthResponse =>
+              complete(StatusCodes.OK, s"Everything is ${response.health.status}!")
+            case Some(user: User) =>
+              complete(user)
+            case _ =>
+              complete(StatusCodes.InternalServerError)
+          }
+//          complete(s"OK, botToken:$botToken botSecret:$botSecret ")
         }
       }
     }
